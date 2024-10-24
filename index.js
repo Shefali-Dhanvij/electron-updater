@@ -1,4 +1,4 @@
-const { BrowserWindow, app, Menu } = require("electron");
+const { BrowserWindow, app, Menu, ipcMain } = require("electron");
 
 // require("./api.js");
 
@@ -7,6 +7,8 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const sqlite3 = require("sqlite3");
 const frontend = express();
+const simpleGit = require("simple-git");
+const isOnline = require("is-online");
 
 const cors = require("cors");
 const path = require("path");
@@ -55,6 +57,67 @@ let sql;
 const db = new sqlite3.Database("./ssf.db");
 
 const { createServer } = require("http");
+
+//////////////////////////
+
+const repositoryURL =
+  "https://github.com/Shefali-Dhanvij/git@github.com:Shefali-Dhanvij/electron-updater.git";
+
+// Set up Git to pull updates
+const git = simpleGit({
+  baseDir: __dirname,
+  binary: "git",
+  maxConcurrentProcesses: 6,
+});
+
+async function ensureRepository() {
+  try {
+    const repoStatus = await git.checkIsRepo();
+    if (!repoStatus) {
+      console.log("Repository not found locally. Cloning...");
+      await git.clone(repositoryURL, __dirname);
+      console.log("Repository cloned successfully.");
+    } else {
+      console.log("Repository found locally.");
+    }
+  } catch (error) {
+    console.error("Error ensuring repository:", error);
+  }
+}
+
+async function checkForUpdates() {
+  try {
+    const status = await git.fetch();
+    if (status.behind > 0) {
+      const latestCommit = await git.log(["-1"]);
+      mainWindow.webContents.send("update-available", latestCommit.latest.hash);
+    }
+  } catch (error) {
+    console.error("Error checking for updates:", error);
+  }
+}
+
+async function pullLatestCode() {
+  try {
+    await git.pull("origin", "main");
+    mainWindow.webContents.send("update-complete");
+    app.relaunch();
+    app.quit();
+  } catch (error) {
+    console.error("Error pulling latest code:", error);
+  }
+}
+
+setInterval(async () => {
+  if (await isOnline()) {
+    await ensureRepository();
+    checkForUpdates();
+  }
+}, 60000);
+
+ipcMain.on("confirm-update", async () => {
+  await pullLatestCode();
+});
 
 appExpress.post("/addPlan", (req, res) => {
   console.log("addPlan");
