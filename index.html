@@ -1,0 +1,31 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Electron Express API</h1>
+    <button onclick="getData()">Get Data</button>
+    <h2 id="responseText">response:</h2>
+    <script>
+      function getData() {
+        console.log("Fetching data...");
+
+        fetch("http://localhost:3001/api/data")
+          .then((response) => {
+            console.log("Response status:", response.status);
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Data received:", data);
+            displayResponse(data.message);
+          })
+          .catch((error) => {
+            console.error("Fetch error:", error);
+          });
+      }
+
+      function displayResponse(message) {
+        document.getElementById("responseText").textContent = message;
+      }
+    </script>
+  </body>
+</html>
