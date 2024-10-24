@@ -134,6 +134,53 @@ appExpress.get("/viewAllPlan", (req, res) => {
   }
 });
 
+appExpress.get("/viewSinglePlan/:id", (req, res) => {
+  try {
+    const planId = req.params.id;
+
+    const sql = "SELECT * FROM tbl_course WHERE id = ?";
+    db.get(sql, [planId], (err, row) => {
+      if (err) {
+        console.error("Error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+      } else if (row) {
+        // Decrypt sensitive data if in encrypted form
+        const decryptedRow = {
+          ...row,
+          plan_name: decryptText(row.plan_name),
+          description: decryptText(row.description),
+        };
+
+        res.json({ error: false, data: decryptedRow });
+      } else {
+        res.json({ error: true, message: "Plan not found" });
+      }
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+appExpress.post("/deletePlan/:id", (req, res) => {
+  try {
+    const planId = req.params.id;
+
+    sql = "DELETE FROM tbl_course WHERE id = ?";
+    db.run(sql, [planId], (err) => {
+      if (err) {
+        console.error("Error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+      } else {
+        res.json({ error: false, message: "plan deleted successfully" });
+      }
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 let mainWindow = null;
 
 function startServer() {
