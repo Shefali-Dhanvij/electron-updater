@@ -7,6 +7,7 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const sqlite3 = require("sqlite3");
 const frontend = express();
+const crypto = require("crypto");
 
 const cors = require("cors");
 const path = require("path");
@@ -57,6 +58,41 @@ const db = new sqlite3.Database("./ssf.db");
 const { createServer } = require("http");
 
 //////////////////////////
+
+function createEncryptText(key) {
+  return function encryptText(text) {
+    if (!text) return null;
+    const algorithm = "aes-256-cbc";
+    const keyBuffer = Buffer.alloc(32);
+    keyBuffer.write(key, 0, Math.min(key.length, keyBuffer.length), "utf-8");
+    const iv = Buffer.from(fixedIv, "utf-8");
+    const cipher = crypto.createCipheriv(algorithm, keyBuffer, iv);
+    let encrypted = cipher.update(text, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return encrypted;
+  };
+}
+
+function createDecryptText(key) {
+  return function decryptText(encryptedText) {
+    if (!encryptedText) return null;
+    const algorithm = "aes-256-cbc";
+    const keyBuffer = Buffer.alloc(32);
+    keyBuffer.write(key, 0, Math.min(key.length, keyBuffer.length), "utf-8");
+    const iv = Buffer.from(fixedIv, "utf-8");
+    const decipher = crypto.createDecipheriv(algorithm, keyBuffer, iv);
+    let decrypted = decipher.update(encryptedText, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  };
+}
+
+const fixedIv = "1234567890abcdef";
+const decryptKey = "abcde";
+
+const encryptionKey = "mgtysm"; // Example key, can be changed as needed
+const encryptText = createEncryptText(encryptionKey);
+const decryptText = createDecryptText(encryptionKey);
 
 appExpress.post("/addPlan", (req, res) => {
   console.log("addPlan");
@@ -131,34 +167,6 @@ appExpress.get("/viewAllPlan", (req, res) => {
       message: "Internal Server Error",
       data: null,
     });
-  }
-});
-
-appExpress.get("/viewSinglePlan/:id", (req, res) => {
-  try {
-    const planId = req.params.id;
-
-    const sql = "SELECT * FROM tbl_course WHERE id = ?";
-    db.get(sql, [planId], (err, row) => {
-      if (err) {
-        console.error("Error:", err);
-        res.status(500).json({ error: "Internal Server Error" });
-      } else if (row) {
-        // Decrypt sensitive data if in encrypted form
-        const decryptedRow = {
-          ...row,
-          plan_name: decryptText(row.plan_name),
-          description: decryptText(row.description),
-        };
-
-        res.json({ error: false, data: decryptedRow });
-      } else {
-        res.json({ error: true, message: "Plan not found" });
-      }
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
