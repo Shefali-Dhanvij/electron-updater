@@ -1,4 +1,4 @@
-const { BrowserWindow, app, Menu, ipcMain } = require("electron");
+const { BrowserWindow, app, Menu } = require("electron");
 
 // require("./api.js");
 
@@ -7,8 +7,6 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const sqlite3 = require("sqlite3");
 const frontend = express();
-const simpleGit = require("simple-git");
-const isOnline = require("is-online");
 
 const cors = require("cors");
 const path = require("path");
@@ -60,65 +58,6 @@ const { createServer } = require("http");
 
 //////////////////////////
 
-const repositoryURL =
-  "https://github.com/Shefali-Dhanvij/git@github.com:Shefali-Dhanvij/electron-updater.git";
-
-// Set up Git to pull updates
-const git = simpleGit({
-  baseDir: __dirname,
-  binary: "git",
-  maxConcurrentProcesses: 6,
-});
-
-async function ensureRepository() {
-  try {
-    const repoStatus = await git.checkIsRepo();
-    if (!repoStatus) {
-      console.log("Repository not found locally. Cloning...");
-      await git.clone(repositoryURL, __dirname);
-      console.log("Repository cloned successfully.");
-    } else {
-      console.log("Repository found locally.");
-    }
-  } catch (error) {
-    console.error("Error ensuring repository:", error);
-  }
-}
-
-async function checkForUpdates() {
-  try {
-    const status = await git.fetch();
-    if (status.behind > 0) {
-      const latestCommit = await git.log(["-1"]);
-      mainWindow.webContents.send("update-available", latestCommit.latest.hash);
-    }
-  } catch (error) {
-    console.error("Error checking for updates:", error);
-  }
-}
-
-async function pullLatestCode() {
-  try {
-    await git.pull("origin", "main");
-    mainWindow.webContents.send("update-complete");
-    app.relaunch();
-    app.quit();
-  } catch (error) {
-    console.error("Error pulling latest code:", error);
-  }
-}
-
-setInterval(async () => {
-  if (await isOnline()) {
-    await ensureRepository();
-    checkForUpdates();
-  }
-}, 60000);
-
-ipcMain.on("confirm-update", async () => {
-  await pullLatestCode();
-});
-
 appExpress.post("/addPlan", (req, res) => {
   console.log("addPlan");
   try {
@@ -152,6 +91,46 @@ appExpress.post("/addPlan", (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+appExpress.get("/viewAllPlan", (req, res) => {
+  try {
+    const sql = "SELECT * FROM tbl_course";
+
+    db.all(sql, [], (err, rows) => {
+      if (err) {
+        console.error("Error fetching plans:", err);
+        // Send an appropriate error response with status code 500
+        return res.status(500).json({
+          error: true,
+          message: "Internal Server Error",
+          data: null,
+        });
+      }
+
+      // Decrypt sensitive fields if necessary
+      const decryptedRows = rows.map((row) => ({
+        ...row,
+        plan_name: decryptText(row.plan_name),
+        description: decryptText(row.description),
+      }));
+
+      // Send success response
+      res.json({
+        error: false,
+        message: "Plans fetched successfully",
+        data: decryptedRows,
+      });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    // Send a generic error response if an exception is caught
+    res.status(500).json({
+      error: true,
+      message: "Internal Server Error",
+      data: null,
+    });
   }
 });
 
