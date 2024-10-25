@@ -57,7 +57,7 @@ const db = new sqlite3.Database("./ssf.db");
 
 const { createServer } = require("http");
 
-//////////////////////////
+///////////////////////////////
 
 function createEncryptText(key) {
   return function encryptText(text) {
@@ -174,6 +174,7 @@ appExpress.get("/viewAllPlan", (req, res) => {
 appExpress.post("/deletePlan/:id", (req, res) => {
   try {
     const planId = req.params.id;
+    console.log("planid==", planId);
 
     sql = "DELETE FROM tbl_course WHERE id = ?";
     db.run(sql, [planId], (err) => {
