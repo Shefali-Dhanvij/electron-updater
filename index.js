@@ -1,21 +1,18 @@
 const { BrowserWindow, app, Menu } = require("electron");
 
 // require("./api.js");
-
 require("dotenv").config();
 const bodyParser = require("body-parser");
 const express = require("express");
 const sqlite3 = require("sqlite3");
 const frontend = express();
 const crypto = require("crypto");
-
 const cors = require("cors");
 const path = require("path");
 process.env.TZ = "Asia/Kolkata";
 const dotenv = require("dotenv");
 dotenv.config({ path: ".env" });
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1500000");
-
 const appExpress = express();
 appExpress.use(express.json({ limit: "100mb" }));
 appExpress.use(express.urlencoded({ extended: true, limit: "100mb" }));
@@ -57,7 +54,7 @@ const db = new sqlite3.Database("./ssf.db");
 
 const { createServer } = require("http");
 
-///////////////////////////////
+////////////////////////////
 
 function createEncryptText(key) {
   return function encryptText(text) {
